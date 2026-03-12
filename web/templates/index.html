@@ -1385,6 +1385,8 @@
                 <option value="igdb_rating-desc" {% if current_sort == 'igdb_rating' %}selected{% endif %}>IGDB User Rating (High-Low)</option>
                 <option value="aggregated_rating-desc" {% if current_sort == 'aggregated_rating' %}selected{% endif %}>IGDB Critic Rating (High-Low)</option>
                 <option value="playtime_hours-desc" {% if current_sort == 'playtime_hours' %}selected{% endif %}>Most Played</option>
+                <option value="added_at-desc" {% if current_sort == 'added_at' and current_order == 'desc' %}selected{% endif %}>Newest Added</option>
+                <option value="added_at-asc" {% if current_sort == 'added_at' and current_order == 'asc' %}selected{% endif %}>Oldest Added</option>
             </select>
 
             {% set has_any_filter = current_stores or current_genres or current_search or current_exclude_streaming or current_collection or current_protondb_tier or current_no_igdb or (current_sort != 'name') or (current_sort == 'name' and current_order != 'asc') %}
