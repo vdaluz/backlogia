@@ -56,7 +56,8 @@ def _set_session_cookie(response, session_id):
         key="backlogia_session",
         value=signed,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=30 * 24 * 60 * 60,
     )
     return response
