@@ -11,7 +11,11 @@ from .services.auth_service import validate_session, user_exists
 
 # Paths that are always accessible (no auth required)
 PUBLIC_PATHS = {"/login", "/auth/login", "/auth/logout"}
-PUBLIC_PREFIXES = ("/static/",)
+# /api/import/* is called by browser bookmarklets from external domains (GOG,
+# Ubisoft). Cross-origin cookie sending is unreliable across browsers, so
+# these write-only endpoints are exempt from auth. The worst case is someone
+# could POST game data if they know the URL — acceptable for a personal app.
+PUBLIC_PREFIXES = ("/static/", "/api/import/")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
