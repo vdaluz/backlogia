@@ -30,7 +30,7 @@ COPY web/ ./web/
 # so host volume mounts can be chowned to match without inspecting the image first
 RUN mkdir -p /data \
     && groupadd -g 1000 appuser \
-    && useradd -u 1000 -g appuser -s /bin/sh appuser \
+    && useradd -u 1000 -g appuser -m -s /bin/sh appuser \
     && chown -R appuser:appuser /app /data
 
 USER appuser
@@ -38,6 +38,9 @@ USER appuser
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV DATABASE_PATH=/data/game_library.db
+# Point HOME to the persistent data volume so legendary/nile auth configs
+# survive container rebuilds (they write to $HOME/.config/)
+ENV HOME=/data
 
 EXPOSE 5050
 
