@@ -72,8 +72,9 @@ def login_page(request: Request, next: str = "/"):
         return RedirectResponse(url="/setup", status_code=303)
 
     return templates.TemplateResponse(
+        request,
         "login.html",
-        {"request": request, "next": next, "error": "", "csrf_token": _generate_csrf_token()},
+        {"next": next, "error": "", "csrf_token": _generate_csrf_token()},
     )
 
 
@@ -88,16 +89,18 @@ def auth_login(
     """Handle login form submission."""
     if not _validate_csrf_token(csrf_token):
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "next": next, "error": "Invalid or expired form token. Please try again.", "csrf_token": _generate_csrf_token()},
+            {"next": next, "error": "Invalid or expired form token. Please try again.", "csrf_token": _generate_csrf_token()},
             status_code=403,
         )
 
     user = verify_user(username, password)
     if user is None:
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "next": next, "error": "Invalid username or password", "csrf_token": _generate_csrf_token()},
+            {"next": next, "error": "Invalid username or password", "csrf_token": _generate_csrf_token()},
             status_code=401,
         )
 
@@ -118,8 +121,9 @@ def setup_page(request: Request):
         return RedirectResponse(url="/login", status_code=303)
 
     return templates.TemplateResponse(
+        request,
         "setup.html",
-        {"request": request, "error": "", "csrf_token": _generate_csrf_token()},
+        {"error": "", "csrf_token": _generate_csrf_token()},
     )
 
 
@@ -137,8 +141,9 @@ def auth_setup(
 
     if not _validate_csrf_token(csrf_token):
         return templates.TemplateResponse(
+            request,
             "setup.html",
-            {"request": request, "error": "Invalid or expired form token. Please try again.", "csrf_token": _generate_csrf_token()},
+            {"error": "Invalid or expired form token. Please try again.", "csrf_token": _generate_csrf_token()},
             status_code=403,
         )
 
@@ -153,8 +158,9 @@ def auth_setup(
 
     if error:
         return templates.TemplateResponse(
+            request,
             "setup.html",
-            {"request": request, "error": error, "csrf_token": _generate_csrf_token()},
+            {"error": error, "csrf_token": _generate_csrf_token()},
             status_code=400,
         )
 
