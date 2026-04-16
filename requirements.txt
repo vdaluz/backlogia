@@ -22,3 +22,6 @@ beautifulsoup4
 # Authentication (optional)
 bcrypt
 itsdangerous
+
+# Credential encryption at rest
+cryptography

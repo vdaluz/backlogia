@@ -26,8 +26,13 @@ RUN pip install --no-cache-dir pycryptodome zstandard requests protobuf json5 \
 # Copy application code
 COPY web/ ./web/
 
-# Create data directory for the database
-RUN mkdir -p /data
+# Create data directory and non-root user
+RUN mkdir -p /data \
+    && groupadd -r appuser \
+    && useradd -r -g appuser appuser \
+    && chown -R appuser:appuser /app /data
+
+USER appuser
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

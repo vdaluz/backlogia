@@ -2,9 +2,15 @@
 # Database-backed settings management for API credentials
 # Environment variables take precedence over database settings (for Docker)
 
+import base64
 import os
 import sqlite3
 from datetime import datetime
+from functools import lru_cache
+
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from ..config import DATABASE_PATH
 
@@ -43,6 +49,45 @@ ENV_VAR_MAP = {
 }
 
 
+# Keys whose values are encrypted at rest in the database.
+# Environment variable overrides bypass the database entirely and are never encrypted.
+SENSITIVE_KEYS = {
+    STEAM_API_KEY,
+    IGDB_CLIENT_SECRET,
+    ITCH_API_KEY,
+    HUMBLE_SESSION_COOKIE,
+    BATTLENET_SESSION_COOKIE,
+    EA_BEARER_TOKEN,
+    XBOX_XSTS_TOKEN,
+}
+
+_KDF_SALT = b"backlogia-creds-v1"
+
+
+@lru_cache(maxsize=1)
+def _get_fernet() -> Fernet:
+    """Build a Fernet instance derived from the app secret key. Cached for the process lifetime."""
+    from .auth_service import get_or_create_secret_key
+
+    secret = get_or_create_secret_key().encode()
+    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=_KDF_SALT, iterations=100_000)
+    key = base64.urlsafe_b64encode(kdf.derive(secret))
+    return Fernet(key)
+
+
+def _encrypt(value: str) -> str:
+    return _get_fernet().encrypt(value.encode()).decode()
+
+
+def _decrypt(value: str) -> str:
+    """Decrypt a stored value. Falls back to plaintext on failure to allow migration
+    of databases created before encryption was introduced."""
+    try:
+        return _get_fernet().decrypt(value.encode()).decode()
+    except (InvalidToken, Exception):
+        return value
+
+
 def _ensure_settings_table(conn):
     """Ensure the settings table exists."""
     cursor = conn.cursor()
@@ -58,7 +103,7 @@ def _ensure_settings_table(conn):
 
 def get_setting(key, default=None):
     """Get a setting value. Environment variables take precedence over database."""
-    # Check environment variable first
+    # Check environment variable first (never encrypted)
     env_var = ENV_VAR_MAP.get(key)
     if env_var:
         env_value = os.environ.get(env_var)
@@ -73,20 +118,26 @@ def get_setting(key, default=None):
         cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
         row = cursor.fetchone()
         conn.close()
-        return row[0] if row else default
+        if row is None:
+            return default
+        value = row[0]
+        if key in SENSITIVE_KEYS and value:
+            value = _decrypt(value)
+        return value
     except Exception:
         return default
 
 
 def set_setting(key, value):
-    """Set a setting value in the database."""
+    """Set a setting value in the database. Sensitive credentials are encrypted at rest."""
+    stored_value = _encrypt(value) if (key in SENSITIVE_KEYS and value) else value
     conn = sqlite3.connect(DATABASE_PATH)
     _ensure_settings_table(conn)
     cursor = conn.cursor()
     cursor.execute("""
         INSERT OR REPLACE INTO settings (key, value, updated_at)
         VALUES (?, ?, ?)
-    """, (key, value, datetime.now().isoformat()))
+    """, (key, stored_value, datetime.now().isoformat()))
     conn.commit()
     conn.close()
 
@@ -103,11 +154,14 @@ def get_all_settings():
         cursor.execute("SELECT key, value FROM settings")
         rows = cursor.fetchall()
         conn.close()
-        settings = {key: value for key, value in rows}
+        for key, value in rows:
+            if key in SENSITIVE_KEYS and value:
+                value = _decrypt(value)
+            settings[key] = value
     except Exception:
         pass
 
-    # Override with environment variables
+    # Override with environment variables (never encrypted)
     for key, env_var in ENV_VAR_MAP.items():
         env_value = os.environ.get(env_var)
         if env_value:
