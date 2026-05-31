@@ -4,6 +4,14 @@
 
 # Backlogia
 
+> **🔒 Security-hardened fork.** This is a fork of [sam1am/backlogia](https://github.com/sam1am/backlogia) (`security-fixes` branch) that adds four hardening changes for self-hosted/internet-adjacent deployments:
+> - **Non-root container user** (fixed UID/GID 1000) instead of running as root
+> - **Locked `/setup` endpoint** — disabled after the owner account is created
+> - **CSRF protection** on the login and setup forms
+> - **Fernet-encrypted credentials at rest** for stored platform API keys
+>
+> The first three are submitted upstream as PRs [#85](https://github.com/sam1am/backlogia/pull/85), [#86](https://github.com/sam1am/backlogia/pull/86), [#87](https://github.com/sam1am/backlogia/pull/87); credential encryption is fork-only. Everything below is from upstream.
+
 **Your entire game library, finally in one place.**
 
 Stop jumping between Steam, Epic, GOG, Xbox, Amazon, and a dozen other launchers just to see what you own. Backlogia aggregates all your games into a single, beautifully organized library with rich metadata, ratings, and discovery features—all running locally on your machine.
